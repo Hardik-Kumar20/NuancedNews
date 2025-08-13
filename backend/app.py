@@ -2,13 +2,13 @@ import json
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-
+from flask_pydantic import validate
+from pydantic import BaseModel, HttpUrl
 from article_summarise import scrape_and_summarize
 from rss_parser import main as rss_parser  # noqa: F401
 
 app = Flask(__name__)
 CORS(app)
-
 
 with app.app_context():
     """
@@ -23,6 +23,7 @@ with app.app_context():
 
     print("Running RSS Parser")
     rss_parser()
+
 
 
 @app.get("/api/health")
@@ -48,11 +49,13 @@ def get_news():
 #         return f"An Error Occurred {e}", 400
 
 
+class SummarizeRequest(BaseModel):
+    url: HttpUrl
+
 @app.route("/summarize", methods=["POST"])
-def summarize():
-    data = request.json
-    url = data["url"]
-    summary = scrape_and_summarize(url)
+@validate()
+def summarize(body: SummarizeRequest):
+    summary = scrape_and_summarize(body.url)
     return jsonify({"summary": summary})
 
 
